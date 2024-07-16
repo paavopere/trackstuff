@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from pprint import pformat
 
 import click
@@ -49,10 +50,15 @@ def create_simple(name):
 
 @create.command(name="csv")
 @click.argument("name")
-def create_csv(name):
+@click.option("--path", "-p", type=click.Path(path_type=Path))
+def create_csv(name, path: Path):
     """Create a CSV-backed tracker"""
-    _log.debug(f"create_csv({name=})")
-    raise NotImplementedError()
+    _log.debug(f"create_csv({name=}, {path=})")
+    state = State.load()
+    tracker = CsvTracker(name, path)
+    # TODO validate path: unique, exists?
+    state.add_tracker(tracker)
+    state.save()
 
 
 @cli.command()

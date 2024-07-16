@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+import csv
 import logging
 import json
+from pathlib import Path
 from pprint import pformat
 from typing import Any, Sized, TypeAlias, Type
 
@@ -57,7 +59,7 @@ class Tracker:
         if kind == "simple":
             return SimpleTracker(name=d["name"], entries=d["entries"])
         elif kind == "csv":
-            return CsvTracker(name=d["name"], path=d["path"])
+            return CsvTracker(name=d["name"], path=Path(d["path"]))
         else:
             raise KeyError(f"unknown tracker kind {kind}")
 
@@ -93,23 +95,34 @@ class SimpleTracker(Tracker):
 
 
 class CsvTracker(Tracker):
-    def __init__(self, name, path):
-        raise NotImplementedError()
+
+    def __init__(self, name: str, path: Path):
+        self.name = name
+        self.path = path.absolute()
+
+    def _read_columns(self) -> list[str]:
+        return ['col1', 'col2', 'col3']
 
     def to_dict(self):
-        raise NotImplementedError()
+        return dict(
+            kind="csv",
+            name=self.name,
+            path=str(self.path)
+        )
 
     def add_entry(self):
         raise NotImplementedError()
 
     @property
     def columns(self):
-        raise NotImplementedError()
+        with open(self.path) as f:
+            return csv.DictReader(f).fieldnames
 
     @property
     def entries(self):
         # read entries from csv
-        raise NotImplementedError()
+        with open(self.path) as f:
+            return [r for r in csv.DictReader(f)]
     
 
 def _init_state() -> StateDict:
