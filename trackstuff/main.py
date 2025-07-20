@@ -125,8 +125,10 @@ class CsvTracker(Tracker):
             return [r for r in csv.DictReader(f)]
     
 
+
 def _init_state() -> StateDict:
     return {"trackers": []}
+
 
 
 def _load_state() -> StateDict:
@@ -134,6 +136,7 @@ def _load_state() -> StateDict:
         d = json.load(f)
     state = {"trackers": [Tracker.from_dict(t) for t in d["trackers"]]}
     return state
+
 
 
 def _save_state(state: StateDict):

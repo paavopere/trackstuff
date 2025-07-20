@@ -4,7 +4,7 @@ from pprint import pformat
 
 import click
 
-from main import State, SimpleTracker, CsvTracker
+from trackstuff.main import State, SimpleTracker, CsvTracker
 
 
 _log = logging.getLogger(__name__)
