@@ -12,20 +12,28 @@ Create simple tracker, add data, show data
 Create tracker from existing csv file and show data:
 
 ```sh
->>> rm foo.csv
->>> cp hp-bup.csv bar.csv
->>> python -m trackstuff.cli create csv bar -p foo.csv
->>> python -m trackstuff.cli show bar
+>>> rm hptrack.csv
+>>> cp hp-bup.csv hptrack.csv
+>>> python -m trackstuff.cli create csv hptrack -p hptrack.csv
+>>> python -m trackstuff.cli show hptrack
 ```
 
 _TODO implement adding data to CSV_
 
-_TODO implement visualizing time-series data_
-
-Type-checking
+Visualize time-series data from CSV:
 
 ```sh
-mypy --enable-incomplete-feature=NewGenericSyntax .
+>>> python -m trackstuff.cli plot hptrack time mass
+```
+
+Type-checking:
+```sh
+mypy .
+```
+
+Testing with coverage:
+```sh
+pytest
 ```
 
 _TODO add more linters_
