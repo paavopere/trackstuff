@@ -1,10 +1,7 @@
 import logging
 import tempfile
-import time
 import webbrowser
-from contextlib import contextmanager
 from pathlib import Path
-from pprint import pformat
 
 import click
 

@@ -35,6 +35,6 @@ Checks:
 ```sh
 uv run pytest
 uv run mypy
+uv run ruff check
 ```
 
-_TODO add linting_

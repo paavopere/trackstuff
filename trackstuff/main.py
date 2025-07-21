@@ -4,12 +4,10 @@ import csv
 import logging
 import json
 from pathlib import Path
-from pprint import pformat
-from typing import Any, Sized, TypeAlias, Type
+from typing import Sized
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 
 
 _log = logging.getLogger(__name__)
@@ -27,7 +25,7 @@ class State:
     def load(cls):
         try:
             return cls(state_dict=_load_state())
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             _log.info('creating new state')
             return cls(state_dict=_init_state())
 
