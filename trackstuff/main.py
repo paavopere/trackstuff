@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 import csv
 import logging
 import json
 from pathlib import Path
 from pprint import pformat
 from typing import Any, Sized, TypeAlias, Type
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+
 
 _log = logging.getLogger(__name__)
 STATE_FILE = "state.json"
@@ -30,7 +34,7 @@ class State:
     def save(self):
         _save_state(self._state_dict)
 
-    def get_tracker(self, name: str):
+    def get_tracker(self, name: str) -> Tracker:
         trackers = self._state_dict["trackers"]
         for t in trackers:
             if t.name == name:
@@ -69,11 +73,9 @@ class Tracker:
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r})"
 
-    @abstractmethod
     def add_entry(self, entry):
         raise NotImplementedError()
 
-    @abstractmethod
     def to_dict(self):
         raise NotImplementedError()
 
@@ -100,9 +102,6 @@ class CsvTracker(Tracker):
         self.name = name
         self.path = path.absolute()
 
-    def _read_columns(self) -> list[str]:
-        return ['col1', 'col2', 'col3']
-
     def to_dict(self):
         return dict(
             kind="csv",
@@ -110,8 +109,9 @@ class CsvTracker(Tracker):
             path=str(self.path)
         )
 
-    def add_entry(self):
-        raise NotImplementedError()
+    # TODO implement adding entries to csv
+    # def add_entry(self):
+    #   ...
 
     @property
     def columns(self):
@@ -120,9 +120,28 @@ class CsvTracker(Tracker):
 
     @property
     def entries(self):
-        # read entries from csv
         with open(self.path) as f:
             return [r for r in csv.DictReader(f)]
+
+    # TODO make generic for other kinds of trackers
+    def create_plot(self, x: str, y: str, path: Path) -> None:
+        """
+        Create a plot from the CSV data and save it to the specified path.
+        """
+        df = pd.read_csv(self.path, parse_dates=[x])
+        df.set_index(x, inplace=True)
+        
+        fig, ax = plt.subplots(figsize=(12, 6))
+        df[y].plot(ax=ax, marker='o', linestyle='-', markersize=4)
+        ax.set_title(f'{self.name}: {y}({x})')
+        ax.grid(True, linestyle='--', alpha=0.7)
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        
+        plt.savefig(path)
+        plt.close(fig)
     
 
 

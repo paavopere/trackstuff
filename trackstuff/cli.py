@@ -1,4 +1,8 @@
 import logging
+import tempfile
+import time
+import webbrowser
+from contextlib import contextmanager
 from pathlib import Path
 from pprint import pformat
 
@@ -76,7 +80,19 @@ def show(name):
     entries = state.get_tracker(name).entries
     click.echo(entries)
 
+@cli.command()
+@click.argument("name")
+@click.argument("x", type=str)
+@click.argument("y", type=str)
+def plot(name: str, x: str, y: str):
+    """Plot data from a tracker in the default web browser."""
+    state = State.load()
+    tracker = state.get_tracker(name)
+    
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp:
+        plot_path = Path(temp.name)
+        tracker.create_plot(x=x, y=y, path=plot_path)
+        webbrowser.open(f"file://{plot_path}")
 
 if __name__ == "__main__":
-
-    cli()
+    cli()  # pragma: no cover
