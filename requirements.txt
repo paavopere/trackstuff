@@ -1,6 +1,0 @@
-click
-matplotlib
-pandas
-git+https://github.com/python/mypy.git  # dev
-pytest  # dev
-pytest-cov  # dev

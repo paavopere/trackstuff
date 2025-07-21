@@ -1,0 +1,22 @@
+[project]
+name = "trackstuff"
+version = "0.1.0"
+description = "Track stuff"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.2.1",
+    "matplotlib>=3.10.3",
+    "pandas>=2.3.1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.0",
+    "pandas-stubs",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+]
+
+[tool.pytest.ini_options]
+addopts = ["--cov=trackstuff", "--cov-report=term-missing"]
