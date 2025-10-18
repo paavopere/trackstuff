@@ -11,6 +11,15 @@ from trackstuff.main import State, SimpleTracker, CsvTracker
 _log = logging.getLogger(__name__)
 
 
+def get_tracker_or_exit(state: State, name: str):
+    """Get a tracker by name or exit with error message if not found."""
+    try:
+        return state.get_tracker(name)
+    except KeyError:
+        click.echo(f"Tracker '{name}' not found", err=True)
+        raise SystemExit(1)
+
+
 @click.group()
 def cli(debug=False):
     if debug:
@@ -27,7 +36,7 @@ def cli(debug=False):
 @click.argument("data")
 def track(name, data):
     state = State.load()
-    tracker = state.get_tracker(name)
+    tracker = get_tracker_or_exit(state, name)
     tracker.add_entry(data)
     state.save()
 
@@ -74,22 +83,38 @@ def list():
 @click.argument("name")
 def show(name):
     state = State.load()
-    entries = state.get_tracker(name).entries
-    click.echo(entries)
+    tracker = get_tracker_or_exit(state, name)
+    click.echo(tracker.entries)
 
 @cli.command()
 @click.argument("name")
-@click.argument("x", type=str)
-@click.argument("y", type=str)
-def plot(name: str, x: str, y: str):
-    """Plot data from a tracker in the default web browser."""
-    state = State.load()
-    tracker = state.get_tracker(name)
+@click.argument("x", type=str, required=False)
+@click.argument("y", type=str, required=False)
+@click.option("--terminal", is_flag=True, help="Plot in terminal using ASCII characters")
+def plot(name: str, x: str | None, y: str | None, terminal: bool):
+    """Plot data from a tracker in the default web browser or terminal.
     
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp:
-        plot_path = Path(temp.name)
-        tracker.create_plot(x=x, y=y, path=plot_path)
-        webbrowser.open(f"file://{plot_path}")
+    If x and y are not provided, uses the first two columns from the tracker.
+    """
+    state = State.load()
+    tracker = get_tracker_or_exit(state, name)
+    
+    if x is None or y is None:
+        columns = tracker.columns
+        if len(columns) < 2:
+            click.echo("Error: Tracker must have at least 2 columns", err=True)
+            raise SystemExit(1)
+        x = columns[0]
+        y = columns[1]
+        click.echo(f"Using columns: x={x}, y={y}")
+    
+    if terminal:
+        tracker.plot_terminal(x=x, y=y)
+    else:
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp:
+            plot_path = Path(temp.name)
+            tracker.create_plot(x=x, y=y, path=plot_path)
+            webbrowser.open(f"file://{plot_path}")
 
 if __name__ == "__main__":
     cli()  # pragma: no cover

@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
-*.csv
+user/
 state.json
-*.lua
 .coverage

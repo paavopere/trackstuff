@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Sized
 
 import pandas as pd
-import matplotlib.pyplot as plt
+
+from trackstuff.plotting import plot_to_file, plot_to_terminal
 
 
 _log = logging.getLogger(__name__)
@@ -50,7 +51,6 @@ class State:
         _log.info(f'added {tracker}')
         
 
-
 class Tracker:
     name: str
     entries: Sized
@@ -70,6 +70,10 @@ class Tracker:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r})"
+
+    @property
+    def columns(self):
+        raise NotImplementedError()
 
     def add_entry(self, entry):
         raise NotImplementedError()
@@ -121,26 +125,25 @@ class CsvTracker(Tracker):
         with open(self.path) as f:
             return [r for r in csv.DictReader(f)]
 
-    # TODO make generic for other kinds of trackers
+    def to_dataframe(self) -> pd.DataFrame:
+        """
+        Load the CSV data as a pandas DataFrame.
+        """
+        return pd.read_csv(self.path)
+
     def create_plot(self, x: str, y: str, path: Path) -> None:
         """
         Create a plot from the CSV data and save it to the specified path.
         """
-        df = pd.read_csv(self.path, parse_dates=[x])
-        df.set_index(x, inplace=True)
-        
-        fig, ax = plt.subplots(figsize=(12, 6))
-        df[y].plot(ax=ax, marker='o', linestyle='-', markersize=4)
-        ax.set_title(f'{self.name}: {y}({x})')
-        ax.grid(True, linestyle='--', alpha=0.7)
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        
-        plt.savefig(path)
-        plt.close(fig)
+        df = self.to_dataframe()
+        plot_to_file(df, x=x, y=y, path=path, name=self.name)
     
+    def plot_terminal(self, x: str, y: str) -> None:
+        """
+        Plot data in the terminal using plotext.
+        """
+        df = self.to_dataframe()
+        plot_to_terminal(df, x=x, y=y, name=self.name)
 
 
 def _init_state() -> StateDict:
