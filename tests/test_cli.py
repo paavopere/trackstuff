@@ -206,7 +206,7 @@ class TestTerminalPlotting:
         pytest.importorskip("plotext")
         
         with runner.isolated_filesystem(), \
-             patch('trackstuff.main.CsvTracker.plot_terminal') as mock_plot:
+             patch('trackstuff.trackers.csv.CsvTracker.plot_terminal') as mock_plot:
             
             result = runner.invoke(cli, ["create", "csv", "test", "-p", str(test_csv)])
             assert result.exit_code == 0

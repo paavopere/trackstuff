@@ -5,7 +5,9 @@ from pathlib import Path
 
 import click
 
-from trackstuff.main import State, SimpleTracker, CsvTracker
+from trackstuff.state import State
+from trackstuff.trackers.simple import SimpleTracker
+from trackstuff.trackers.csv import CsvTracker
 
 
 _log = logging.getLogger(__name__)
