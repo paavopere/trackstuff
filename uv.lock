@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [[package]]
@@ -845,12 +845,13 @@ wheels = [
 
 [[package]]
 name = "trackstuff"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.2.0"
+source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "matplotlib" },
     { name = "pandas" },
+    { name = "plotext" },
 ]
 
 [package.dev-dependencies]
@@ -858,7 +859,6 @@ dev = [
     { name = "ipykernel" },
     { name = "mypy" },
     { name = "pandas-stubs" },
-    { name = "plotext" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -869,6 +869,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "pandas", specifier = ">=2.3.1" },
+    { name = "plotext", specifier = ">=5.3.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -876,7 +877,6 @@ dev = [
     { name = "ipykernel", specifier = ">=6.30.0" },
     { name = "mypy", specifier = ">=1.17.0" },
     { name = "pandas-stubs" },
-    { name = "plotext", specifier = ">=5.3.2" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.12.4" },

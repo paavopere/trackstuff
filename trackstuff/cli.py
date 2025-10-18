@@ -20,7 +20,17 @@ def get_tracker_or_exit(state: State, name: str):
         raise SystemExit(1)
 
 
+def add_tracker_or_exit(state: State, tracker):
+    """Add a tracker to state or exit with error message if name already exists."""
+    try:
+        state.add_tracker(tracker)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
 @click.group()
+@click.option("--debug", is_flag=True, help="Enable debug logging")
 def cli(debug=False):
     if debug:
         log_level = logging.DEBUG
@@ -28,7 +38,6 @@ def cli(debug=False):
         log_level = logging.INFO
     logging.basicConfig(level=log_level)
     _log.debug("Logging has been configured")
-    pass
 
 
 @cli.command()
@@ -37,7 +46,10 @@ def cli(debug=False):
 def track(name, data):
     state = State.load()
     tracker = get_tracker_or_exit(state, name)
+    
     tracker.add_entry(data)
+
+    
     state.save()
 
 
@@ -53,7 +65,7 @@ def create_simple(name):
     _log.debug(f"create_simple({name=})")
     state = State.load()
     tracker = SimpleTracker(name=name)
-    state.add_tracker(tracker)
+    add_tracker_or_exit(state, tracker)
     state.save()
 
 
@@ -64,10 +76,14 @@ def create_simple(name):
 def create_csv(name, path: Path):
     """Create a CSV-backed tracker"""
     _log.debug(f"create_csv({name=}, {path=})")
+    
+    if not path.exists():
+        click.echo(f"Error: Path '{path}' does not exist", err=True)
+        raise SystemExit(1)
+    
     state = State.load()
     tracker = CsvTracker(name, path)
-    # TODO validate path: unique, exists?
-    state.add_tracker(tracker)
+    add_tracker_or_exit(state, tracker)
     state.save()
 
 

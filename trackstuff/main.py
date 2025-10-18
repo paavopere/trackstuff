@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import logging
 import json
+import os
 from pathlib import Path
 from typing import Sized
 
@@ -12,7 +13,33 @@ from trackstuff.plotting import plot_to_file, plot_to_terminal
 
 
 _log = logging.getLogger(__name__)
-STATE_FILE = "state.json"
+
+
+def _get_state_file() -> Path:
+    """Get the path to the state file.
+    
+    Priority order:
+    1. TRACKSTUFF_STATE_PATH environment variable (if set)
+    2. XDG_CONFIG_HOME/trackstuff/state.json (if XDG_CONFIG_HOME is set)
+    3. ~/.config/trackstuff/state.json (default)
+    """
+    # Allow explicit override via environment variable
+    state_path_override = os.environ.get("TRACKSTUFF_STATE_PATH")
+    if state_path_override:
+        state_file = Path(state_path_override)
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        return state_file
+    
+    # Respect XDG Base Directory specification
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config_home:
+        config_base = Path(xdg_config_home)
+    else:
+        config_base = Path.home() / ".config"
+    
+    config_dir = config_base / "trackstuff"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return config_dir / "state.json"
 
 
 type StateDict = dict
@@ -75,7 +102,7 @@ class Tracker:
     def columns(self):
         raise NotImplementedError()
 
-    def add_entry(self, entry):
+    def add_entry(self, entry: str) -> None:
         raise NotImplementedError()
 
     def to_dict(self):
@@ -94,7 +121,7 @@ class SimpleTracker(Tracker):
     def to_dict(self) -> dict:
         return {"kind": "simple", "name": self.name, "entries": self.entries}
 
-    def add_entry(self, entry):
+    def add_entry(self, entry: str) -> None:
         self.entries.append(entry)
 
 
@@ -111,9 +138,26 @@ class CsvTracker(Tracker):
             path=str(self.path)
         )
 
-    # TODO implement adding entries to csv
-    # def add_entry(self):
-    #   ...
+    def add_entry(self, entry: str) -> None:
+        entry_dict = json.loads(entry)        
+        if not isinstance(entry_dict, dict):
+            raise TypeError("Entry must be a JSON that parses to a dict")
+        
+        columns = self.columns
+        if set(entry_dict.keys()) != set(columns):
+            raise ValueError(f"Entry keys {set(entry_dict.keys())} do not match CSV columns {set(columns)}")
+        
+        # Ensure file ends with newline before appending
+        with open(self.path, 'r+') as f:
+            f.seek(0, 2)  # Go to end of file
+            f.seek(f.tell() - 1)  # Go to last character
+            last_char = f.read(1)
+            if last_char != '\n':
+                f.write('\n')
+        
+        with open(self.path, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writerow(entry_dict)
 
     @property
     def columns(self):
@@ -152,7 +196,8 @@ def _init_state() -> StateDict:
 
 
 def _load_state() -> StateDict:
-    with open(STATE_FILE) as f:
+    state_file = _get_state_file()
+    with open(state_file) as f:
         d = json.load(f)
     state = {"trackers": [Tracker.from_dict(t) for t in d["trackers"]]}
     return state
@@ -160,7 +205,8 @@ def _load_state() -> StateDict:
 
 
 def _save_state(state: StateDict):
+    state_file = _get_state_file()
     serialized = {"trackers": [t.to_dict() for t in state["trackers"]]}
-    with open(STATE_FILE, "w") as f:
+    with open(state_file, "w") as f:
         json.dump(serialized, f, indent=2)
-        _log.info(f"saved {STATE_FILE}")
+        _log.info(f"saved {state_file}")

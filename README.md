@@ -66,10 +66,20 @@ uv run -m trackstuff.cli plot --terminal hptrack
 
 ## Development
 
-Run tests and checks:
+### Pre-commit Hook
+
+Copy the pre-commit hook to the .git/hooks directory and make it executable. Then checks will run automatically on commit.
+```
+cp pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+### Manual Testing
+
+Run all tests and checks manually:
 ```bash
 uv run pytest
-uv run mypy
+uv run mypy trackstuff
 uv run ruff check
 ```
 

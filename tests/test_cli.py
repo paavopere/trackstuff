@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+import os
 
 import matplotlib
 import pytest
@@ -19,6 +20,21 @@ def non_interactive_backend():
 def runner() -> CliRunner:
     return CliRunner()
 
+@pytest.fixture(autouse=True)
+def isolated_state(tmp_path: Path):
+    """
+    Automatically isolate state file for each test.
+    Sets the state file to a temporary location via environment variable.
+    """
+    state_file = tmp_path / "state.json"
+    old_env = os.environ.get("TRACKSTUFF_STATE_PATH")
+    os.environ["TRACKSTUFF_STATE_PATH"] = str(state_file)
+    yield state_file
+    if old_env:
+        os.environ["TRACKSTUFF_STATE_PATH"] = old_env
+    else:
+        del os.environ["TRACKSTUFF_STATE_PATH"]
+
 @pytest.fixture
 def clean_state(tmp_path: Path) -> Path:
     """
@@ -34,6 +50,16 @@ def test_csv() -> Path:
     Fixture that returns the path to the test CSV file.
     """
     return Path(__file__).parent / "data" / "date_number.csv"
+
+
+class TestCLI:
+    """Tests for CLI functionality."""
+    
+    def test_debug_flag(self, runner: CliRunner):
+        """Test that --debug flag enables debug logging."""
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["--debug", "list"])
+            assert result.exit_code == 0
 
 
 class TestTrackerCreation:
@@ -90,6 +116,62 @@ class TestTrackerCreation:
             assert result.exit_code == 0
             assert "test1" in result.output
             assert "test2" in result.output
+    
+    def test_create_csv_tracker_nonexistent_file(self, runner: CliRunner):
+        """
+        Test that creating a CSV tracker with a non-existent file fails.
+        """
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", "nonexistent.csv"])
+            assert result.exit_code == 1
+            assert "does not exist" in result.output
+    
+    def test_create_csv_tracker_duplicate_name(self, runner: CliRunner, test_csv: Path):
+        """
+        Test that creating a CSV tracker with a duplicate name fails.
+        """
+        with runner.isolated_filesystem():
+            # Create first tracker
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(test_csv)])
+            assert result.exit_code == 0
+            
+            # Try to create another with the same name
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(test_csv)])
+            assert result.exit_code == 1
+            assert "already exists" in result.output
+    
+    def test_track_csv_with_json(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test adding JSON data to a CSV tracker.
+        """
+        csv_path = tmp_path / "test.csv"
+        csv_path.write_text("time,value\n")
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["track", "test", '{"time": "2024-01-01", "value": "100"}'])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["show", "test"])
+            assert result.exit_code == 0
+            assert "2024-01-01" in result.output
+            assert "100" in result.output
+    
+    def test_track_csv_with_invalid_json(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test that invalid JSON is rejected for CSV tracker.
+        """
+        csv_path = tmp_path / "test.csv"
+        csv_path.write_text("time,value\n")
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["track", "test", "not-json"])
+            assert result.exit_code != 0
 
 
 @pytest.mark.usefixtures("non_interactive_backend")
@@ -107,7 +189,7 @@ class TestPlotting:
             assert result.exit_code == 0
             
             # Plot should work without error
-            result = runner.invoke(cli, ["plot", "test", "time", "number"])
+            result = runner.invoke(cli, ["plot", "test", "date", "number"])
             assert result.exit_code == 0
             
             # Check that webbrowser.open was called with a file:// URL
@@ -117,47 +199,55 @@ class TestPlotting:
 
 
 class TestTerminalPlotting:
-    """Tests for terminal-based plotting with plotext."""
+    """Tests for CLI terminal plotting commands."""
     
-    def test_plot_terminal_succeeds_when_tracker_exists(self, runner: CliRunner, test_csv: Path):
-        """
-        Test that plot --terminal returns exit code 0 when tracker exists.
-        """
+    def test_plot_terminal_calls_tracker_method(self, runner: CliRunner, test_csv: Path):
+        """Test that plot --terminal calls tracker.plot_terminal with correct args."""
         pytest.importorskip("plotext")
         
-        with runner.isolated_filesystem():
-            # Create a CSV tracker
+        with runner.isolated_filesystem(), \
+             patch('trackstuff.main.CsvTracker.plot_terminal') as mock_plot:
+            
             result = runner.invoke(cli, ["create", "csv", "test", "-p", str(test_csv)])
             assert result.exit_code == 0
             
-            # Plot in terminal should succeed
             result = runner.invoke(cli, ["plot", "--terminal", "test", "time", "number"])
             assert result.exit_code == 0
+            
+            mock_plot.assert_called_once_with(x='time', y='number')
 
     def test_plot_terminal_uses_default_columns(self, runner: CliRunner, test_csv: Path):
-        """
-        Test that plot --terminal uses first two columns when x and y not specified.
-        """
+        """Test that plot --terminal uses first two columns when not specified."""
         pytest.importorskip("plotext")
         
         with runner.isolated_filesystem():
-            # Create a CSV tracker
             result = runner.invoke(cli, ["create", "csv", "test", "-p", str(test_csv)])
             assert result.exit_code == 0
             
-            # Plot without specifying columns
             result = runner.invoke(cli, ["plot", "--terminal", "test"])
             assert result.exit_code == 0
-            assert "Using columns: x=time, y=number" in result.output
+            assert "Using columns: x=date, y=number" in result.output
 
     def test_plot_terminal_fails_when_tracker_missing(self, runner: CliRunner):
-        """
-        Test that plot --terminal exits with error when tracker doesn't exist.
-        """
+        """Test that plot --terminal exits with error when tracker doesn't exist."""
         pytest.importorskip("plotext")
         
         with runner.isolated_filesystem():
-            # Try to plot a non-existent tracker
             result = runner.invoke(cli, ["plot", "--terminal", "nonexistent", "time", "mass"])
             assert result.exit_code != 0
             assert "Tracker 'nonexistent' not found" in result.output
+
+    def test_plot_fails_with_insufficient_columns(self, runner: CliRunner, tmp_path: Path):
+        """Test that plot fails when tracker has fewer than 2 columns."""
+        pytest.importorskip("plotext")
+        
+        with runner.isolated_filesystem():
+            csv_path = tmp_path / "single_col.csv"
+            csv_path.write_text("value\n10\n20\n30\n")
+            
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["plot", "--terminal", "test"])
+            assert result.exit_code == 1
+            assert "must have at least 2 columns" in result.output

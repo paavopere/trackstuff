@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+echo "running pre-commit checks"
+uv run pytest -q
+uv run ruff check
+uv run mypy trackstuff
+echo "pre-commit OK"
+
