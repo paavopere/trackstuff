@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import tempfile
@@ -87,13 +88,40 @@ def create_simple(name):
 @create.command(name="csv")
 @click.argument("name")
 @click.option("--path", "-p", type=click.Path(path_type=Path))
-def create_csv(name, path: Path):
+@click.option("--columns", "-c", help="Comma-separated column names (e.g., 'date,weight')")
+@click.option("--interactive", "-i", is_flag=True, help="Interactively prompt for column names")
+def create_csv(name, path: Path, columns: str, interactive: bool):
     """Create a CSV-backed tracker"""
-    _log.debug(f"create_csv({name=}, {path=})")
+    _log.debug(f"create_csv({name=}, {path=}, {columns=}, {interactive=})")
     
     if not path.exists():
-        click.echo(f"Error: Path '{path}' does not exist", err=True)
-        raise SystemExit(1)
+        # File doesn't exist, need to create it with columns
+        if interactive:
+            # Prompt for columns interactively
+            click.echo("Enter column names (one per line, empty line to finish):")
+            column_list = []
+            while True:
+                col = click.prompt("Column name", default="", show_default=False)
+                if not col:
+                    break
+                column_list.append(col)
+            
+            if not column_list:
+                click.echo("Error: At least one column is required", err=True)
+                raise SystemExit(1)
+            
+            columns_str = ",".join(column_list)
+        elif columns:
+            columns_str = columns
+        else:
+            click.echo(f"Error: Path '{path}' does not exist. Use --columns or --interactive to create it.", err=True)
+            raise SystemExit(1)
+        
+        # Create the CSV file with headers
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(columns_str.split(','))
     
     state = State.load()
     tracker = CsvTracker(name, path)

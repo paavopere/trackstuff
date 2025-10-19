@@ -117,14 +117,63 @@ class TestTrackerCreation:
             assert "test1" in result.output
             assert "test2" in result.output
     
-    def test_create_csv_tracker_nonexistent_file(self, runner: CliRunner):
+    def test_create_csv_tracker_with_columns(self, runner: CliRunner, tmp_path: Path):
         """
-        Test that creating a CSV tracker with a non-existent file fails.
+        Test creating a CSV tracker with a non-existent file by specifying columns.
         """
+        csv_path = tmp_path / "new.csv"
+        
         with runner.isolated_filesystem():
-            result = runner.invoke(cli, ["create", "csv", "test", "-p", "nonexistent.csv"])
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path), "--columns", "date,weight"])
+            assert result.exit_code == 0
+            
+            # Verify file was created with headers
+            assert csv_path.exists()
+            content = csv_path.read_text()
+            assert content == "date,weight\n"
+            
+            # Verify tracker was created
+            result = runner.invoke(cli, ["list"])
+            assert "test" in result.output
+    
+    def test_create_csv_tracker_interactive_columns(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test creating a CSV tracker interactively by prompting for columns.
+        """
+        csv_path = tmp_path / "new.csv"
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path), "--interactive"], 
+                                 input="date\nweight\n\n")
+            assert result.exit_code == 0
+            
+            # Verify file was created with headers
+            assert csv_path.exists()
+            content = csv_path.read_text()
+            assert content == "date,weight\n"
+    
+    def test_create_csv_tracker_nonexistent_file_without_columns(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test that creating a CSV tracker with non-existent file fails if no columns specified.
+        """
+        csv_path = tmp_path / "nonexistent.csv"
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
             assert result.exit_code == 1
-            assert "does not exist" in result.output
+            assert "does not exist" in result.output or "columns" in result.output.lower()
+    
+    def test_create_csv_tracker_interactive_no_columns(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test that creating a CSV tracker interactively fails if no columns provided.
+        """
+        csv_path = tmp_path / "new.csv"
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path), "--interactive"], 
+                                 input="\n")
+            assert result.exit_code == 1
+            assert "at least one column" in result.output.lower()
     
     def test_create_csv_tracker_duplicate_name(self, runner: CliRunner, test_csv: Path):
         """
