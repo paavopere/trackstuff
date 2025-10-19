@@ -174,6 +174,73 @@ class TestTrackerCreation:
             assert result.exit_code != 0
 
 
+class TestInteractiveTracking:
+    """Tests for interactive tracking mode."""
+    
+    def test_track_csv_interactive(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test adding data to CSV tracker in interactive mode.
+        """
+        csv_path = tmp_path / "test.csv"
+        csv_path.write_text("date,weight\n")
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            # Interactive mode: provide input for each column
+            result = runner.invoke(cli, ["track", "--interactive", "test"], input="2024-01-15\n75.5\n")
+            assert result.exit_code == 0
+            
+            # Verify entry was added
+            result = runner.invoke(cli, ["show", "test"])
+            assert result.exit_code == 0
+            assert "2024-01-15" in result.output
+            assert "75.5" in result.output
+    
+    def test_track_interactive_with_simple_tracker(self, runner: CliRunner):
+        """
+        Test that interactive mode raises NotImplementedError with simple tracker.
+        """
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "simple", "test"])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["track", "--interactive", "test"])
+            assert result.exit_code != 0
+            assert result.exception is not None
+    
+    def test_track_without_data_or_interactive(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test that track command fails when neither data nor interactive flag is provided.
+        """
+        csv_path = tmp_path / "test.csv"
+        csv_path.write_text("date,weight\n")
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["track", "test"])
+            assert result.exit_code == 1
+            assert "DATA argument required" in result.output
+    
+    def test_track_interactive_with_empty_csv(self, runner: CliRunner, tmp_path: Path):
+        """
+        Test that interactive mode raises error with empty CSV (no columns).
+        """
+        csv_path = tmp_path / "test.csv"
+        csv_path.write_text("")
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(cli, ["create", "csv", "test", "-p", str(csv_path)])
+            assert result.exit_code == 0
+            
+            result = runner.invoke(cli, ["track", "--interactive", "test"])
+            assert result.exit_code != 0
+            assert result.exception is not None
+
+
 @pytest.mark.usefixtures("non_interactive_backend")
 class TestPlotting:
     """Tests for plotting functionality."""

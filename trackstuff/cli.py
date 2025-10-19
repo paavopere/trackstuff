@@ -1,3 +1,4 @@
+import json
 import logging
 import tempfile
 import webbrowser
@@ -44,14 +45,25 @@ def cli(debug=False):
 
 @cli.command()
 @click.argument("name")
-@click.argument("data")
-def track(name, data):
+@click.argument("data", required=False)
+@click.option("--interactive", "-i", is_flag=True, help="Interactively prompt for each column value")
+def track(name, data, interactive):
     state = State.load()
     tracker = get_tracker_or_exit(state, name)
     
-    tracker.add_entry(data)
-
+    if interactive:
+        # Interactive mode: prompt for each column
+        columns = tracker.columns
+        entry_dict = {}
+        for column in columns:
+            value = click.prompt(column)
+            entry_dict[column] = value
+        data = json.dumps(entry_dict)
+    elif data is None:
+        click.echo("Error: DATA argument required when not in interactive mode", err=True)
+        raise SystemExit(1)
     
+    tracker.add_entry(data)
     state.save()
 
 
