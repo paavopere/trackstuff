@@ -96,7 +96,7 @@ trackstuff plot --terminal weight date weight
 ### Pre-commit Hook
 
 Copy the pre-commit hook to the .git/hooks directory and make it executable. Then checks will run automatically on commit.
-```
+```bash
 cp pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
