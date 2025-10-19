@@ -1,5 +1,6 @@
 from trackstuff.trackers import Tracker
 
+
 class SimpleTracker(Tracker):
     entries: list
 
@@ -14,4 +15,3 @@ class SimpleTracker(Tracker):
 
     def add_entry(self, entry: str) -> None:
         self.entries.append(entry)
-

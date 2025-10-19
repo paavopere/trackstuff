@@ -43,3 +43,48 @@ ignore_missing_imports = false
 [[tool.mypy.overrides]]
 module = "plotext"
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort (import sorting)
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "C4",    # flake8-comprehensions
+    "RUF",   # Ruff-specific rules
+    "PT",    # flake8-pytest-style
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print (no print statements)
+    "RET",   # flake8-return
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "ERA",   # eradicate (no commented-out code)
+    "PL",    # pylint
+    "PERF",  # perflint (performance)
+]
+ignore = [
+    "B017",    # Allow pytest.raises(Exception) for generic error testing
+    "B904",    # Allow raising new exceptions in except blocks for CLI error handling
+    "PLR0913", # Allow more than 5 function arguments
+    "PLR2004", # Allow magic values in comparisons
+    "PT011",   # Allow pytest.raises without match parameter
+    "PLC0415", # Allow imports inside functions (for circular dependency avoidance)
+    "PTH123",  # Allow open() instead of Path.open() (more common pattern)
+    "ARG002",  # Allow unused method arguments (fixtures may be used for side effects)
+]
+
+[tool.ruff.lint.isort]
+force-single-line = false
+lines-after-imports = 2

@@ -1,7 +1,9 @@
 """Shared test fixtures."""
+
 import os
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -18,4 +20,3 @@ def isolated_state(tmp_path: Path):
         os.environ["TRACKSTUFF_STATE_PATH"] = old_env
     else:
         del os.environ["TRACKSTUFF_STATE_PATH"]
-

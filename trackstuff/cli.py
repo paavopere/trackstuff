@@ -8,8 +8,8 @@ from pathlib import Path
 import click
 
 from trackstuff.state import State
-from trackstuff.trackers.simple import SimpleTracker
 from trackstuff.trackers.csv import CsvTracker
+from trackstuff.trackers.simple import SimpleTracker
 
 
 _log = logging.getLogger(__name__)
@@ -36,10 +36,7 @@ def add_tracker_or_exit(state: State, tracker):
 @click.group()
 @click.option("--debug", is_flag=True, help="Enable debug logging")
 def cli(debug=False):
-    if debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
+    log_level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=log_level)
     _log.debug("Logging has been configured")
 
@@ -51,7 +48,7 @@ def cli(debug=False):
 def track(name, data, interactive):
     state = State.load()
     tracker = get_tracker_or_exit(state, name)
-    
+
     if interactive:
         # Interactive mode: prompt for each column
         columns = tracker.columns
@@ -63,7 +60,7 @@ def track(name, data, interactive):
     elif data is None:
         click.echo("Error: DATA argument required when not in interactive mode", err=True)
         raise SystemExit(1)
-    
+
     tracker.add_entry(data)
     state.save()
 
@@ -84,7 +81,6 @@ def create_simple(name):
     state.save()
 
 
-
 @create.command(name="csv")
 @click.argument("name")
 @click.option("--path", "-p", type=click.Path(path_type=Path))
@@ -93,7 +89,7 @@ def create_simple(name):
 def create_csv(name, path: Path, columns: str, interactive: bool):
     """Create a CSV-backed tracker"""
     _log.debug(f"create_csv({name=}, {path=}, {columns=}, {interactive=})")
-    
+
     if not path.exists():
         # File doesn't exist, need to create it with columns
         if interactive:
@@ -105,24 +101,24 @@ def create_csv(name, path: Path, columns: str, interactive: bool):
                 if not col:
                     break
                 column_list.append(col)
-            
+
             if not column_list:
                 click.echo("Error: At least one column is required", err=True)
                 raise SystemExit(1)
-            
+
             columns_str = ",".join(column_list)
         elif columns:
             columns_str = columns
         else:
             click.echo(f"Error: Path '{path}' does not exist. Use --columns or --interactive to create it.", err=True)
             raise SystemExit(1)
-        
+
         # Create the CSV file with headers
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(columns_str.split(','))
-    
+
     state = State.load()
     tracker = CsvTracker(name, path)
     add_tracker_or_exit(state, tracker)
@@ -134,7 +130,7 @@ def list():
     state = State.load()
     trackers = state._state_dict.get("trackers", {})
     for t in sorted(trackers, key=lambda x: x.name):
-        print(t)
+        click.echo(t)
 
 
 @cli.command()
@@ -144,6 +140,7 @@ def show(name):
     tracker = get_tracker_or_exit(state, name)
     click.echo(tracker.entries)
 
+
 @cli.command()
 @click.argument("name")
 @click.argument("x", type=str, required=False)
@@ -151,12 +148,12 @@ def show(name):
 @click.option("--terminal", is_flag=True, help="Plot in terminal using ASCII characters")
 def plot(name: str, x: str | None, y: str | None, terminal: bool):
     """Plot data from a tracker in the default web browser or terminal.
-    
+
     If x and y are not provided, uses the first two columns from the tracker.
     """
     state = State.load()
     tracker = get_tracker_or_exit(state, name)
-    
+
     if x is None or y is None:
         columns = tracker.columns
         if len(columns) < 2:
@@ -165,7 +162,7 @@ def plot(name: str, x: str | None, y: str | None, terminal: bool):
         x = columns[0]
         y = columns[1]
         click.echo(f"Using columns: x={x}, y={y}")
-    
+
     if terminal:
         tracker.plot_terminal(x=x, y=y)
     else:
@@ -173,6 +170,7 @@ def plot(name: str, x: str | None, y: str | None, terminal: bool):
             plot_path = Path(temp.name)
             tracker.create_plot(x=x, y=y, path=plot_path)
             webbrowser.open(f"file://{plot_path}")
+
 
 if __name__ == "__main__":
     cli()  # pragma: no cover

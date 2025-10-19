@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sized
 from pathlib import Path
-from typing import Sized
 
 
 class Tracker:
@@ -10,16 +10,15 @@ class Tracker:
 
     @classmethod
     def from_dict(cls, d: dict):
-        from trackstuff.trackers.simple import SimpleTracker
         from trackstuff.trackers.csv import CsvTracker
-        
+        from trackstuff.trackers.simple import SimpleTracker
+
         kind = d["kind"]
         if kind == "simple":
             return SimpleTracker(name=d["name"], entries=d["entries"])
-        elif kind == "csv":
+        if kind == "csv":
             return CsvTracker(name=d["name"], path=Path(d["path"]))
-        else:
-            raise KeyError(f"unknown tracker kind {kind}")
+        raise KeyError(f"unknown tracker kind {kind}")
 
     def __len__(self):
         return len(self.entries)
@@ -39,4 +38,3 @@ class Tracker:
 
 
 __all__ = ["Tracker"]
-
